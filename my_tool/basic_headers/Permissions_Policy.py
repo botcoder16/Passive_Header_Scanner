@@ -1,80 +1,88 @@
-def permissions_policy(header, i):
-    # Define the expected values
-    expected_values = {
-        "accelerometer": "(none)",
-        "autoplay": "(none)",
-        "camera": "(none)",
-        "cross-origin-isolated": "(none)",
-        "display-capture": "(none)",
-        "encrypted-media": "(none)",
-        "fullscreen": "(self)",
-        "geolocation": "(none)",
-        "gyroscope": "(none)",
-        "keyboard-map": "(none)",
-        "magnetometer": "(none)",
-        "microphone": "(none)",
-        "midi": "(none)",
-        "payment": "(none)",
-        "picture-in-picture": "(none)",
-        "publickey-credentials-get": "(self)",
-        "screen-wake-lock": "(none)",
-        "sync-xhr": "(self)",
-        "usb": "(none)",
-        "web-share": "(none)",
-        "xr-spatial-tracking": "(none)",
-        "clipboard-read": "(none)",
-        "clipboard-write": "(none)",
-        "gamepad": "(none)",
-        "hid": "(none)",
-        "idle-detection": "(none)",
-        "interest-cohort": "(none)",
-        "serial": "(none)",
-        "unload": "(none)"
+def permissions_policy(headers):
+    # Define recommended values for the Permission-Policy directives
+    recommended_values = {
+        'accelerometer': '()',
+        'autoplay': '()',
+        'camera': '()',
+        'cross-origin-isolated': '()',
+        'display-capture': '()',
+        'encrypted-media': '()',
+        'fullscreen': '()',
+        'geolocation': '()',
+        'gyroscope': '()',
+        'keyboard-map': '()',
+        'magnetometer': '()',
+        'microphone': '()',
+        'midi': '()',
+        'payment': '()',
+        'picture-in-picture': '()',
+        'publickey-credentials-get': '()',
+        'screen-wake-lock': '()',
+        'sync-xhr': '(self)',
+        'usb': '()',
+        'web-share': '()',
+        'xr-spatial-tracking': '()',
+        'clipboard-read': '()',
+        'clipboard-write': '()',
+        'gamepad': '()',
+        'hid': '()',
+        'idle-detection': '()',
+        'interest-cohort': '()',
+        'serial': '()',
+        'unload': '()'
     }
 
-    # Get the header value
-    value = header.get("permissions-policy", "")
+    result = ""
 
-    # Parse the header value into directives
-    directives = {}
-    for item in value.split(", "):
-        parts = item.split("=")
-        if len(parts) == 2:  # Ensure valid key=value pairs
-            k, v = parts
-            directives[k.strip()] = v.strip()
-        else:
-            print(f"Invalid directive format: {item}")  # Log invalid directives
+    # Check if the Permission-Policy header is present
+    current_policy = headers.get('Permission-Policy', None)
 
-    # Initialize the result message
-    message = ''
-    
-    # Check each directive
-    for directive, expected in expected_values.items():
-        if directive in directives:
-            actual_value = directives[directive]
-            if actual_value != expected:
-                message += f"{directive} is not configured correctly. Expected: {expected}, Found: {actual_value}\n"
-        else:
-            message += f"{directive} is missing from Permissions-Policy header.\n"
+    if current_policy:
+        result += f"Permission-Policy header found: {current_policy}\n"
+        
+        # Split current policy into individual directives
+        current_directives = dict(
+            map(lambda x: tuple(x.strip().split('=')), current_policy.split(','))
+        )
 
-    # If all checks pass
-    if not message.strip():
-        return [1, 1, "Permissions-Policy header is properly configured."]
+        # Check for missing or incorrect directives
+        missing_directives = []
+        incorrect_directives = []
+
+        for directive, recommended_value in recommended_values.items():
+            if directive not in current_directives:
+                missing_directives.append(directive)
+            elif current_directives[directive] != recommended_value:
+                incorrect_directives.append(directive)
+        
+        # Handle missing directives
+        if missing_directives:
+            result += f"⚠ Missing directives: {', '.join(missing_directives)}\n"
+            result += "Recommendation:\n"
+            result += f"- Add the missing directives with recommended values: {', '.join(missing_directives)} = ()\n"
+
+        # Handle incorrect directives
+        if incorrect_directives:
+            result += f"⚠ Incorrect directives or values found: {', '.join(incorrect_directives)}\n"
+            result += "Recommendation:\n"
+            result += f"- Update the incorrect directives to use recommended values: {', '.join(incorrect_directives)} = ()\n"
+
     else:
-        return [1, 0, message.strip()]
+        result += "⚠ Permission-Policy header is missing.\n"
+        result += "Recommendation:\n"
+        result += f"- Add 'Permission-Policy' header with recommended directives and values: {', '.join(recommended_values.keys())} = ()\n"
 
+    # Explanation of recommended values
+    result += "\nExplanation of recommended values:\n"
+    result += "- The 'Permission-Policy' header controls which features and APIs can be accessed by the page.\n"
+    result += "- The recommended values help restrict access to sensitive resources for privacy and security reasons.\n"
+    result += "- Using `()` means no origin is allowed access to the feature, and using `(self)` means only the same origin can access it.\n"
+    result += "- It's important to restrict permissions to only what is necessary for functionality.\n"
 
-def no_permissions_policy(value,category):
-    if category in [1, 3, 5, 6]:  # E-Commerce, Dynamic, Media, Technical
-        message = (
-            "Header not present. It is strongly recommended to add the Permissions-Policy header "
-            "to restrict access to browser features like geolocation, camera, or microphone. "
-            "This is especially important for sensitive or dynamic websites to prevent potential abuse."
-        )
-    elif category in [2, 4]:  # Static, Hybrid
-        message = (
-            "Header not present. The Permissions-Policy header should be added to control access to browser features. "
-            "Even for static or hybrid content, restricting unnecessary permissions reduces potential attack vectors."
-        )
+    return [1,result]
 
-    return [0, 0, message]
+def no_permissions_policy(value):
+    message = (
+        "Header not present. It is strongly recommended to add the Permissions-Policy header "
+        "to restrict access to browser features like geolocation, camera, or microphone. ")
+    return [0, message]

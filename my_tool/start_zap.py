@@ -1,19 +1,19 @@
 import subprocess
 import time
 
-zap_jar_path = 'C:\\Program Files\\ZAP\\Zed Attack Proxy\\zap-2.15.0.jar'
-# Start ZAP in daemon mode
-zap_process = subprocess.Popen(['java', '-jar', zap_jar_path, '-daemon', '-port', '8081'])
+# zap_jar_path = 'C:\\Program Files\\ZAP\\Zed Attack Proxy\\zap-2.15.0.jar'
+# # Start ZAP in daemon mode
+# zap_process = subprocess.Popen(['java', '-jar', zap_jar_path, '-daemon', '-port', '8081'])
 
 
-# Allow some time for ZAP to start
-time.sleep(10)
+# # Allow some time for ZAP to start
+# time.sleep(10)
 
-# Check if ZAP is running
-if zap_process.poll() is None:
-    print("ZAP is running in daemon mode.")
-else:
-    print("Failed to start ZAP.")
+# # Check if ZAP is running
+# if zap_process.poll() is None:
+#     print("ZAP is running in daemon mode.")
+# else:
+#     print("Failed to start ZAP.")
 
 # Run Uvicorn
 uvicorn_process = subprocess.Popen(

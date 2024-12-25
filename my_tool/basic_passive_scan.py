@@ -1,4 +1,4 @@
-from fetching_2 import fetch_messages
+from fetching_2 import fetch_response_headers
 from basic_headers.Cache_Control import cache_control,no_cache_control
 from basic_headers.X_Frame_Options import x_frame_options,no_x_frame_options
 from basic_headers.Content_Security_Policy import content_security_policy, no_content_security_policy
@@ -15,9 +15,9 @@ from basic_headers.X_Content_Type_Options import x_content_type_options, no_x_co
 import pprint
 
 
-def basic_scan(url,i):
+def basic_scan(url):
 
-    request_test_headers, response_test_headers = fetch_messages(url)
+    response_test_headers = fetch_response_headers(url)
     header_functions = {
         'cache-control': cache_control,
         'x-frame-options': x_frame_options,
@@ -50,44 +50,48 @@ def basic_scan(url,i):
         'x-permitted-cross-domain-policies': no_x_permitted_cross_domain_policies,    
     }
     header_check={
-        'cache-control': [0,0,''],
-        'x-frame-options': [0,0,''],
-        'x-content-type-options': [0,0,''],
-        'content-security-policy': [0,0,''],
-        'strict-transport-security': [0,0,''],
-        'access-control-allow-origin': [0,0,''],
-        'cross-origin-embedder-policy': [0,0,''],
-        'cross-origin-opener-policy': [0,0,''],
-        'cross-origin-resource-policy': [0,0,''],
-        'clear-site-data': [0,0,''],
-        'permissions-policy':[0,0,''],
-        'referrer-policy': [0,0,''],
-        'x-permitted-cross-domain-policies': [0,0,''],
+        'cache-control': [0,''],
+        'x-frame-options': [0,''],
+        'x-content-type-options': [0,''],
+        'content-security-policy': [0,''],
+        'strict-transport-security': [0,''],
+        'access-control-allow-origin': [0,''],
+        'cross-origin-embedder-policy': [0,''],
+        'cross-origin-opener-policy': [0,''],
+        'cross-origin-resource-policy': [0,''],
+        'clear-site-data': [0,''],
+        'permissions-policy':[0,''],
+        'referrer-policy': [0,''],
+        'x-permitted-cross-domain-policies': [0,''],
     }
+    
+    # Initialize an empty dictionary for storing combined header values
+    unique_response_headers = {}
+    # Initialize an empty list for storing duplicate header names
+    duplicate_headers = []
 
-    unique_response_headers=[]
-    for headers in response_test_headers:
-        if headers in unique_response_headers:
-            continue
+    # Iterate over the response_test_headers dictionary
+    for header_name, header_value in response_test_headers.items():
+        # If the header name already exists in the dictionary, combine values
+        if header_name in unique_response_headers:
+            unique_response_headers[header_name] += ', ' + header_value  # Concatenate values with a comma
+            # Check if it's not already in the duplicate list, then add it
+            if header_name not in duplicate_headers:
+                duplicate_headers.append(header_name)
         else:
-            unique_response_headers.append(headers)
+            # Otherwise, add the header to the dictionary
+            unique_response_headers[header_name] = header_value
     
-    print(len(unique_response_headers))
-    
-    for dict_temp in unique_response_headers:
-        normalized_headers = {key.lower(): value for key, value in dict_temp.items()}
+    normalized_headers = {key.lower(): value for key, value in unique_response_headers.items()}
 
-        # Check each predefined header and call the corresponding function if present
-        for header, func in header_functions.items():
-            if header_check[header][0] != 1:
-                if header in normalized_headers:
-                        output=func(normalized_headers,i)
-                        header_check[header] = output
-                else:
-                    output = header_missing_function[header](normalized_headers,i)
-                    header_check[header] = output
-            else :
-                continue
+    # Check each predefined header and call the corresponding function if present
+    for header, func in header_functions.items():
+        if header in normalized_headers:
+                output=func(normalized_headers)
+                header_check[header] = output
+        else:
+            output = header_missing_function[header](normalized_headers)
+            header_check[header] = output
     #pprint.pprint(unique_response_headers ) 
     pprint.pprint(header_check)
     print()

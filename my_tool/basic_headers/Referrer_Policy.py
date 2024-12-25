@@ -1,39 +1,36 @@
-def referrer_policy(header,i):
-    value=header['referrer-policy']
-    if value == 'no-referrer':
-        return [1, 1, 'Header configured properly with the highest security.']
-    elif value == 'strict-origin-when-cross-origin':
-        return [1, 1, 'Header configured securely for general use.']
-    elif value == 'same-origin':
-        return [1, 0, 'Header configured securely for restricting referrer data to same-origin requests only.']
-    elif value == 'strict-origin':
-        return [1, 1, 'Header set securely, prevents referrer leakage to HTTP origins.']
-    elif value == 'origin':
-        return [1, 0, 'Header present, but less secure. Reveals the origin cross-origin.']
-    elif value == 'origin-when-cross-origin':
-        return [1, 0, 'Header present, but could be stricter. Sends full referrer for same-origin, origin only cross-origin.']
-    elif value == 'no-referrer-when-downgrade':
-        return [1, 0, 'Header present, but this is the default behavior and could be improved with stricter values.']
-    elif value == 'unsafe-url':
-        return [1, 0, 'Header present, but least secure. Full referrer including path and query is sent.']
-    elif value == '':
-        return [0, 0, 'Header error. Highly recommended to configure Referrer-Policy.']
-    
-def no_referrer_policy(value,category):
-    if category in [1, 3, 5]:  # E-Commerce, Dynamic, Media
-        message = (
-            "Header not present. The Referrer-Policy header is critical for protecting sensitive data in referrer URLs. "
-            "Set this header to 'no-referrer' or 'strict-origin-when-cross-origin' to prevent leaking user data or transaction information to third-party sites."
-        )
-    elif category in [2, 4, 6]:  # Static, Hybrid, Technical
-        message = (
-            "Header not present. Adding the Referrer-Policy header is recommended to improve privacy. "
-            "Use 'no-referrer' or 'strict-origin' to minimize data exposure when users navigate away from your site."
-        )
+def referrer_policy(headers):
+    # Referrer-Policy header analysis
+    recommended_policy = 'no-referrer'
+    result = ""
+
+    # Check for the existence of the Referrer-Policy header
+    current_policy = headers.get('Referrer-Policy', None)
+
+    if current_policy:
+        result += f"Referrer-Policy found: {current_policy}\n"
+
+        # Compare current policy with the recommended one
+        if current_policy == recommended_policy:
+            result += f"✔ Recommended policy ('{recommended_policy}') is correctly set.\n\n"
+        else:
+            result += f"⚠ Current policy ('{current_policy}') does not match the recommended policy ('{recommended_policy}').\n"
+            result += "Recommendation:\n- Update to 'no-referrer' for maximum privacy and security.\n"
     else:
-        message = (
-            "Header not set. The Referrer-Policy header should be configured to ensure referrer data is shared only as needed, "
-            "based on your site's privacy and security requirements."
-        )
+        result += "⚠ Referrer-Policy header is missing.\n"
+        result += f"Recommendation:\n- Add 'Referrer-Policy: {recommended_policy}' to ensure privacy protection.\n\n"
+
+    # Explanation of 'no-referrer'
+    result += "Why 'no-referrer' is recommended:\n"
+    result += "- Prevents sending the `Referer` header, avoiding leaks of sensitive information.\n"
+    result += "- Ensures user privacy when navigating between pages or domains.\n"
+    result += "- Reduces risk in scenarios involving confidential data or restricted resources.\n\n"
+
+    return [1,result]
+    
+def no_referrer_policy(value):
+    message = (
+        "Header not present. The Referrer-Policy header is critical for protecting sensitive data in referrer URLs. "
+        "Set this header to 'no-referrer' or 'strict-origin-when-cross-origin' to prevent leaking user data or transaction information to third-party sites."
+    )
 
     return [0, 0, message]

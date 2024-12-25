@@ -1,14 +1,15 @@
 def access_control_allow_origin(header,i):
-    value = header['access-control-allow-origin']
-    if i in [0,1,2,4,5,6] :
-        if value == '*':
-            return [1,0,'Dont use star for CDN on public network']
-        return [1,1,'No issues, header present']
+    value = header.get('access-control-allow-origin', '').strip()
+    # Validate Access-Control-Allow-Origin values
+    if value == '*':
+        result= "Access-Control-Allow-Origin present: * (Not Recommended; Consider restricting origins to specific domains for better security)"
+    elif value == 'null':
+        result= "Access-Control-Allow-Origin present: NULL (Not Recommended; Avoid this value for security reasons)"
     else:
-        if value == '*':
-            return [1,1,'Header value perfect for dynamic and utility sites but will recommend using trusted domains']
+        result= f"Access-Control-Allow-Origin present: {value} (Valid; Ensure only trusted domains are listed)"
+    return [0, result]
     
-def no_access_control_allow_origin(header,i):
+def no_access_control_allow_origin(header):
     text='Header not present and vulnerable if using APIs'
     if 'content-security-policy' in header and 'x-frame-options' in header:
         value1 = header['content-security-policy']
@@ -21,4 +22,4 @@ def no_access_control_allow_origin(header,i):
             text='Header not present but compensated by other header referrer-policy'
     if 'access-control-allow-methods' in header or 'access-control-allow-credentials' in header:
         text=text+'Header not present and should be included as access-control-allow-method and access-control-allow-credential rely on it'
-    return [0,0,text]
+    return [0, text]

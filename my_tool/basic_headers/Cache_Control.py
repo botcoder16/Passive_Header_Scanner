@@ -1,72 +1,37 @@
-def cache_control(header,i):
-    value=header['cache-control']
+def cache_control(headers):
+    recommended_values = {"no-store", "max-age=0", "no-cache"}
+    result = ""
+
+    # Check for Cache-Control header
+    current_policy = headers.get('cache-control', None)
+
+    result += f"Cache-Control header found: {current_policy}\n"
     
-    if i == 1:
-        elements=['no-store','no-cache','maz-age=0','must-revalidate']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values no-store,no-cache,maz-age=0,must-revalidate should be present']
-    elif i == 2:
-        elements=['public','immutable','max-age=604800']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values public, immutable, max-age=604800 should be present']
-    elif i == 3:
-        elements=['no-cache','private','max-age=0']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values no-cache, private, max-age=0 should be present']
-    elif i == 4:
-        elements=['private','no-transform','max-age=3600','stale-while-revalidate=600']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values private, no-transform, max-age=3600, stale-while-revalidate=600 should be present']
-    elif i == 5:
-        elements=['public','immutable','stale-if-error=120']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values public, immutable, stale-if-error=120 should be present']
-    elif i == 6:
-        elements=['no-store','no-cache','s-maxage=0']
-        if all(element in value for element in elements):
-            return [1,1,'All required header values present']
-        else:
-            return [1,0,'All values no-store, no-cache, s-maxage=0 should be present']
+    # Split existing values into a set
+    current_values = set(map(str.strip, current_policy.split(',')))
+    
+    # Check if recommended values are included
+    missing_values = recommended_values - current_values
+    if not missing_values:
+        result += f"✔ The recommended values ({', '.join(recommended_values)}) are already included.\n\n"
     else:
-        max_age = 0
-        if 'max-age' in value:
-            max_age = int(value.split('=')[1])
-        else:
-            if 'no-cache' in value:
-                text=''
-            else:
-                text='Most essential value not set in the header.'
+        result += f"⚠ The following recommended values are missing: {', '.join(missing_values)}\n"
+        result += "Recommendation:\n"
+        result += f"- Add the missing values ({', '.join(missing_values)}) to the Cache-Control header.\n\n"
 
-        # Default message for max-age
-        if max_age != 0:
-            text = 'Recommended value of max-age is 0 for security.'
-        elif max_age <= 31536000:
-            text = 'Recommended value of max-age is 31536000 for performance but compromises security.'
+    # Explanation of recommended values
+    result += "Why 'no-store, max-age=0' is recommended:\n"
+    result += "- `no-store`: Prevents browsers and intermediate caches from storing any version of the resource.\n"
+    result += "- `max-age=0`: Ensures the resource is always revalidated before use, avoiding stale data.\n"
+    result += "- These settings are critical for sensitive data like authentication responses or personal information.\n\n"
 
-        # Check if 'public' or 'private' is set
-        if 'public' in value:
-            if 'must-revalidate' in value:
-                return [1, 1, text + ' Properly configured for publicly available content but needs changes for sensitive data.']
-            else:
-                return [1, 0, text + ' Properly configured for publicly available content, but very less secure']
-        elif 'private' in value:
-            if 'no-cache' in value and 'must-revalidate' in value:
-                return [1, 1, 'Header is properly configured']
-            else:
-                return [1, 0, 'All the three values max-age=0, no-cache, must-revalidate should be present']
-        
-        # If neither 'public' nor 'private' is present
-        return [1, 0, 'Header present but missing major values like public or private']
+    return [1,result]
+
     
-def no_cache_control(value,i):
-    return [0,1,'Header missing and should be added']
+def no_cache_control(value):
+    recommended_values = {"no-store", "max-age=0", "no-cache"}
+    result = ''
+    result += "⚠ Cache-Control header is missing.\n"
+    result += "Recommendation:\n"
+    result += f"- Add 'Cache-Control: {', '.join(recommended_values)}' along with any other necessary directives.\n\n"
+    return [0, result]
