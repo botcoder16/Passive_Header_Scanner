@@ -33,4 +33,4 @@ def no_referrer_policy(value):
         "Set this header to 'no-referrer' or 'strict-origin-when-cross-origin' to prevent leaking user data or transaction information to third-party sites."
     )
 
-    return [0, 0, message]
+    return [0, message]

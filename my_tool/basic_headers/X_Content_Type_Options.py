@@ -6,4 +6,4 @@ def x_content_type_options(header):
         return [1, f'Header present but value is "{value}". The value should strictly be "nosniff" for security.']
 
 def no_x_content_type_options(value):
-    return [0, 0, 'Header missing. Highly recommended to enable X-Content-Type-Options with value "nosniff", to enhance security and protect against MIME type sniffing vulnerabilities.']
+    return [0, 'Header missing. Highly recommended to enable X-Content-Type-Options with value "nosniff", to enhance security and protect against MIME type sniffing vulnerabilities.']

@@ -1,102 +1,72 @@
-import re
+import requests
+from urllib.parse import urlparse
+from prettytable import PrettyTable
+
+def categorize_csp(csp_header):
+    """
+    Categorize CSP header values into Safe and Unsafe based on the cheatsheet.
+    """
+    safe_values = {'self', 'none', 'strict-dynamic', 'https:'}
+    unsafe_values = {'unsafe-inline', 'unsafe-eval', '*', 'data:'}
+
+    categorized = []
+
+    # Split CSP directives and process each
+    directives = csp_header.split(';')
+    for directive in directives:
+        if not directive.strip():
+            continue
+        name, *sources = directive.strip().split()
+        sources_set = set(sources)
+
+        # Determine if the directive is safe or unsafe
+        status = "Safe" if not sources_set & unsafe_values else "Unsafe"
+        risks = []
+        if "unsafe-inline" in sources_set:
+            risks.append("Allows inline scripts/styles, prone to XSS attacks.")
+        if "unsafe-eval" in sources_set:
+            risks.append("Allows eval(), increasing XSS risks.")
+        if "*" in sources_set:
+            risks.append("Wildcard allows any origin, reducing security.")
+        if "data:" in sources_set:
+            risks.append("Data URIs can be exploited for malicious payloads.")
+
+        categorized.append({
+            "directive": name,
+            "sources": ' '.join(sources),
+            "status": status,
+            "risks": ' | '.join(risks) if risks else "None"
+        })
+
+    return categorized
+
 def content_security_policy(header):
-    recommendations = {
-        'default-src': "Notes:\n- Sets fallback for other directives.\n"
-                       "- Affects scripts, stylesheets, images, etc.\n"
-                       "- Recommended values: 'self', 'none', specific URLs.\n\n",
+    """
+    Evaluate the CSP header of the given URL and categorize its directives.
+    """
+    try:
+        csp_header = header.get('content-security-policy')
 
-        'script-src': "Notes:\n- Controls executable script sources.\n"
-                      "- Crucial for preventing XSS attacks.\n"
-                      "- Recommended: 'self', specific trusted domains.\n\n",
+        if not csp_header:
+            print("No CSP header found for the target URL.")
+            return
 
-        'style-src': "Notes:\n- Controls stylesheet sources.\n"
-                     "- Avoid 'unsafe-inline' to prevent XSS vulnerabilities.\n"
-                     "- Recommended: 'self', specific trusted domains.\n\n",
+        categorized = categorize_csp(csp_header)
 
-        'connect-src': "Notes:\n- Restricts origins for connections.\n"
-                       "- Affects XMLHttpRequest, WebSocket, fetch(), etc.\n"
-                       "- Ensure it covers necessary domains and protocols.\n\n",
+        table = PrettyTable()
+        table.field_names = ["Directive", "Sources", "Status", "Potential Risks"]
 
-        'object-src': "Notes:\n- Controls embedded objects (e.g., Flash).\n"
-                      "- Recommended: Avoid unless necessary.\n\n",
+        for entry in categorized:
+            table.add_row([entry['directive'], entry['sources'], entry['status'], entry['risks']])
 
-        'media-src': "Notes:\n- Controls sources of audio and video.\n"
-                     "- Recommended: Restrict to trusted sources.\n\n",
+        print("\n==== CSP Header Evaluation ====")
+        print(table)
 
-        'frame-src': "Notes:\n- Controls sources that can embed the page.\n"
-                     "- Crucial for preventing clickjacking attacks.\n"
-                     "- Recommended: Restrict to trusted sources.\n\n",
+        return [1,'Present']
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching the URL: {e}")
+    
 
-        'worker-src': "Notes:\n- Controls scripts used as workers.\n"
-                      "- Affects Web Workers, SharedWorkers, ServiceWorkers.\n"
-                      "- Recommended: 'self', specific trusted domains.\n\n",
-
-        'font-src': "Notes:\n- Controls font sources.\n"
-                    "- Recommended: Restrict to trusted sources to avoid exploits.\n\n",
-
-        'img-src': "Notes:\n- Controls image sources.\n"
-                   "- Important for preventing image-based XSS attacks.\n\n",
-
-        'manifest-src': "Notes:\n- Controls application manifests.\n"
-                        "- Important for offline functionality and PWAs.\n\n",
-
-        'prefetch-src': "Notes:\n- Controls resources allowed to be prefetched.\n"
-                        "- Affects performance optimization for preloading.\n\n",
-
-        'child-src': "Notes:\n- Controls sources for iframe, embed, object, frameset.\n"
-                     "- Important for preventing XSS in third-party iframes.\n\n",
-
-        'form-action': "Notes:\n- Restricts URLs for form submissions.\n\n",
-
-        'frame-ancestors': "Notes:\n- Specifies valid parents for embedding the page.\n\n",
-
-        'base-uri': "Notes:\n- Restricts URLs in the document's <base> element.\n\n",
-
-        'report-uri': "Notes:\n- Provides a URL for CSP violation reports.\n\n",
-
-        'report-to': "Notes:\n- Specifies endpoint token for CSP violation reports.\n\n",
-
-        'upgrade-insecure-requests': "Notes:\n- Instructs user agents to upgrade insecure HTTP URLs to HTTPS.\n\n",
-
-        'block-all-mixed-content': "Notes:\n- Prevents loading mixed content (HTTP over HTTPS).\n\n",
-
-        'sandbox': "Notes:\n- Enables a sandbox for the page.\n"
-                   "- Restricts functionality like script execution.\n\n",
-    }
-
-    # Parse CSP directives
-    directives = {}
-    value = header.get('content-security-policy','')
-    for directive in value.split(';'):
-        directive = directive.strip()
-        if directive:
-            match = re.match(r'(\w+)\s*(.*)', directive)
-            if match:
-                name, value = match.group(1).strip(), match.group(2).strip()
-                directives[name] = value
-
-    # Start analyzing directives
-    result = ""
-    for name, value in directives.items():
-        result += f"\nAnalyzing directive: {name}\nCurrent Value: {value or 'Not Set'}\n"
-        result += recommendations.get(name, "Unknown directive. Review manually.\n")
-
-    # Add missing OWASP recommended directives
-    owasp_recommendations = {
-        'default-src': "'self'",
-        'form-action': "'self'",
-        'object-src': "'none'",
-        'frame-ancestors': "'none'",
-        'upgrade-insecure-requests': "",
-        'block-all-mixed-content': "",
-    }
-    for name, value in owasp_recommendations.items():
-        if name not in directives:
-            result += f"\nAnalyzing directive: {name}\nCurrent Value: Not Set\n"
-            result += f"Recommendation: Set to {value or 'an appropriate value'}\n"
-            result += recommendations.get(name, "")
-
-    return [1,result]
 
 def no_content_security_policy(value):
     return [0,'Content-security-policy header should be present']

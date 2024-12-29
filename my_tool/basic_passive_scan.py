@@ -92,6 +92,4 @@ def basic_scan(url):
         else:
             output = header_missing_function[header](normalized_headers)
             header_check[header] = output
-    #pprint.pprint(unique_response_headers ) 
-    pprint.pprint(header_check)
-    print()
+    return(header_check)

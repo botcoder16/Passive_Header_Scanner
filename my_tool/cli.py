@@ -1,10 +1,6 @@
-from core import normal_scan,category_scan
+from core import normal_scan
 import argparse
 import re
-import requests
-import subprocess
-import time
-import socket
 
 def main():
     parser = argparse.ArgumentParser(description="Welcome to the Passive scanner")
