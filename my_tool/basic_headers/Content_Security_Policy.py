@@ -55,6 +55,8 @@ def content_security_policy(header):
 
         table = PrettyTable()
         table.field_names = ["Directive", "Sources", "Status", "Potential Risks"]
+        table.max_width["Sources"]= 40
+        table.max_width["Potential Risks"] = 30
 
         for entry in categorized:
             table.add_row([entry['directive'], entry['sources'], entry['status'], entry['risks']])
